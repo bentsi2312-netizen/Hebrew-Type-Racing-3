@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>הקלדת מילים בעברית – התחברות</title>
+  <!-- Tailwind CSS via CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    /* Background image covers the whole page */
+    body {
+      background-image: url('background.png');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+    }
+    /* Cookie banner styling */
+    #cookieBanner {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.75);
+      color: #fff;
+      padding: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-center items-center text-center text-white">
+  <!-- Cookie consent banner -->
+  <div id="cookieBanner" class="hidden">
+    <p class="text-sm">אנו משתמשים בקבצי עוגייה לשיפור חוויית המשתמש. על‑ידי המשך שימוש באתר הנך מאשר את השימוש בקוקיות.</p>
+    <button id="acceptCookie" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded ml-4">אישור</button>
+  </div>
+  <!-- Login container -->
+  <div id="loginSection" class="bg-black bg-opacity-70 p-8 rounded-lg shadow-lg w-11/12 max-w-md">
+    <h1 class="text-3xl mb-4 font-bold">משחק הקלדה בעברית</h1>
+    <!-- Choose login method -->
+    <div id="chooseLogin">
+      <button id="phoneBtn" class="bg-blue-500 hover:bg-blue-600 transition px-4 py-2 rounded w-full mb-2 text-lg font-medium">התחבר עם טלפון</button>
+      <button id="emailBtn" class="bg-purple-500 hover:bg-purple-600 transition px-4 py-2 rounded w-full text-lg font-medium">הרשמה דרך אימייל</button>
+    </div>
+    <!-- Phone login form -->
+    <div id="phoneLogin" class="hidden">
+      <input id="phoneInput" type="tel" placeholder="05XXXXXXXX" class="w-full p-2 mb-2 text-black rounded" autocomplete="tel">
+      <button id="sendSmsBtn" class="bg-blue-500 hover:bg-blue-600 transition px-4 py-2 rounded w-full font-medium">שלח SMS</button>
+      <div id="smsStatus" class="mt-2 text-sm"></div>
+      <div id="smsCodeDiv" class="hidden mt-2">
+        <input id="smsCodeInput" type="text" placeholder="הזן קוד אימות" class="w-full p-2 mb-2 text-black rounded" autocomplete="one-time-code">
+        <button id="verifySmsBtn" class="bg-green-500 hover:bg-green-600 transition px-4 py-2 rounded w-full font-medium">אמת קוד</button>
+      </div>
+    </div>
+    <!-- Email signup form -->
+    <div id="emailLogin" class="hidden">
+      <input id="emailInput" type="email" placeholder="example@example.com" class="w-full p-2 mb-2 text-black rounded" autocomplete="email">
+      <button id="sendEmailBtn" class="bg-purple-500 hover:bg-purple-600 transition px-4 py-2 rounded w-full font-medium">שלח אימייל</button>
+      <div id="emailStatus" class="mt-2 text-sm"></div>
+      <div id="emailVerifyDiv" class="hidden mt-2">
+        <button id="verifyEmailLink" class="bg-green-500 hover:bg-green-600 transition px-4 py-2 rounded w-full font-medium">לחץ כאן לאימות</button>
+      </div>
+    </div>
+  </div>
+  <!-- Welcome / post login section -->
+  <div id="welcomeSection" class="hidden bg-black bg-opacity-70 p-8 rounded-lg shadow-lg w-11/12 max-w-md mt-4">
+    <h2 class="text-2xl mb-2 font-bold" id="welcomeMsg"></h2>
+    <p id="locationStatus" class="mb-4"></p>
+    <button id="startGameBtn" class="bg-green-500 hover:bg-green-600 transition px-4 py-2 rounded w-full font-medium">התחל לשחק</button>
+  </div>
+  <!-- Footer with privacy and terms -->
+  <footer class="fixed bottom-0 left-0 right-0 text-center text-xs text-gray-300 bg-black bg-opacity-50 py-2">
+    © 2026 Hebrew Typing Game. כל הזכויות שמורות.
+    <a href="#" id="privacyLink" class="underline mx-2">מדיניות פרטיות</a>
+    <a href="#" id="termsLink" class="underline mx-2">תקנון</a>
+  </footer>
+  <!-- Axios for HTTP requests -->
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script>
+    (function() {
+      // Cookie banner logic
+      const cookieBanner = document.getElementById('cookieBanner');
+      const acceptCookie = document.getElementById('acceptCookie');
+      if (!localStorage.getItem('cookieAccepted')) {
+        cookieBanner.classList.remove('hidden');
+      }
+      acceptCookie.addEventListener('click', () => {
+        localStorage.setItem('cookieAccepted', 'yes');
+        cookieBanner.classList.add('hidden');
+      });
+
+      // Elements
+      const phoneBtn = document.getElementById('phoneBtn');
+      const emailBtn = document.getElementById('emailBtn');
+      const phoneLogin = document.getElementById('phoneLogin');
+      const emailLogin = document.getElementById('emailLogin');
+      const chooseLogin = document.getElementById('chooseLogin');
+      const sendSmsBtn = document.getElementById('sendSmsBtn');
+      const smsStatus = document.getElementById('smsStatus');
+      const smsCodeDiv = document.getElementById('smsCodeDiv');
+      const verifySmsBtn = document.getElementById('verifySmsBtn');
+      const phoneInput = document.getElementById('phoneInput');
+      const smsCodeInput = document.getElementById('smsCodeInput');
+      const welcomeSection = document.getElementById('welcomeSection');
+      const welcomeMsg = document.getElementById('welcomeMsg');
+      const locationStatus = document.getElementById('locationStatus');
+      const startGameBtn = document.getElementById('startGameBtn');
+      const sendEmailBtn = document.getElementById('sendEmailBtn');
+      const emailInput = document.getElementById('emailInput');
+      const emailStatus = document.getElementById('emailStatus');
+      const emailVerifyDiv = document.getElementById('emailVerifyDiv');
+      const verifyEmailLink = document.getElementById('verifyEmailLink');
+
+      // Show phone login
+      phoneBtn.addEventListener('click', () => {
+        chooseLogin.classList.add('hidden');
+        phoneLogin.classList.remove('hidden');
+      });
+      // Show email login
+      emailBtn.addEventListener('click', () => {
+        chooseLogin.classList.add('hidden');
+        emailLogin.classList.remove('hidden');
+      });
+
+      let smsVerificationCode = '';
+      // Send SMS (simulation)
+      sendSmsBtn.addEventListener('click', () => {
+        const phone = phoneInput.value.trim();
+        const regex = /^(\+9725\d{8}|05\d{8})$/;
+        smsStatus.classList.remove('text-red-400', 'text-green-400');
+        if (!regex.test(phone)) {
+          smsStatus.textContent = 'מספר טלפון לא חוקי';
+          smsStatus.classList.add('text-red-400');
+          return;
+        }
+        // Simulate sending SMS (in production, call backend)
+        smsVerificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        console.log('SMS code sent to', phone, smsVerificationCode);
+        smsStatus.textContent = 'נשלח SMS לטלפון ' + phone;
+        smsStatus.classList.add('text-green-400');
+        smsCodeDiv.classList.remove('hidden');
+      });
+      // Verify SMS code
+      verifySmsBtn.addEventListener('click', () => {
+        const codeEntered = smsCodeInput.value.trim();
+        smsStatus.classList.remove('text-red-400', 'text-green-400');
+        if (codeEntered === smsVerificationCode) {
+          localStorage.setItem('userPhone', phoneInput.value.trim());
+          showWelcome('מספר הטלפון', phoneInput.value.trim());
+        } else {
+          smsStatus.textContent = 'קוד לא נכון';
+          smsStatus.classList.add('text-red-400');
+        }
+      });
+
+      // Send email (simulation)
+      sendEmailBtn.addEventListener('click', () => {
+        const email = emailInput.value.trim();
+        emailStatus.classList.remove('text-red-400', 'text-green-400');
+        if (!/^\S+@\S+\.\S+$/.test(email)) {
+          emailStatus.textContent = 'כתובת אימייל לא חוקית';
+          emailStatus.classList.add('text-red-400');
+          return;
+        }
+        emailStatus.textContent = 'נשלח אימייל ל ' + email;
+        emailStatus.classList.add('text-green-400');
+        emailVerifyDiv.classList.remove('hidden');
+      });
+      // Verify email link (simulation)
+      verifyEmailLink.addEventListener('click', () => {
+        localStorage.setItem('userEmail', emailInput.value.trim());
+        showWelcome('כתובת האימייל', emailInput.value.trim());
+      });
+
+      // Display welcome section and ask for location
+      function showWelcome(type, value) {
+        phoneLogin.classList.add('hidden');
+        emailLogin.classList.add('hidden');
+        welcomeSection.classList.remove('hidden');
+        welcomeMsg.textContent = 'ברוך הבא! ' + type + ': ' + value;
+        askLocation();
+      }
+      // Request geolocation and send to backend
+      function askLocation() {
+        if (!navigator.geolocation) {
+          locationStatus.textContent = 'המיקום אינו נתמך בדפדפן שלך';
+          return;
+        }
+        locationStatus.textContent = 'מבקש אישור מיקום...';
+        navigator.geolocation.getCurrentPosition((pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          locationStatus.textContent = 'שולח מיקום לשרת...';
+          // In production, replace YOUR_BACKEND_URL with actual domain
+          fetch('https://YOUR_BACKEND_URL/location', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ latitude: lat, longitude: lng })
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.success) {
+                locationStatus.textContent = 'המיקום נשלח בהצלחה';
+              } else {
+                locationStatus.textContent = 'אירעה שגיאה בשליחת מיקום';
+              }
+            })
+            .catch(() => {
+              locationStatus.textContent = 'שגיאה בחיבור לשרת';
+            });
+        }, (err) => {
+          locationStatus.textContent = 'המשתמש סירב לשתף מיקום';
+        });
+      }
+      // Start game button
+      startGameBtn.addEventListener('click', () => {
+        // Redirect to game page
+        window.location.href = 'game.html';
+      });
+    })();
+  </script>
+</body>
+</html>
