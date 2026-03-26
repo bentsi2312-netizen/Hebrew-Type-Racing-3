@@ -1,7 +1,331 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>הקלדת מילים בעברית – התחברות</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fonts -->
+    <style>
+      body {
+        font-family: system-ui, "Noto Sans Hebrew", Arial, sans-serif;
+        background-image: url('background.png');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        min-height: 100vh;
+      }
+      /* half-transparent overlay for readability */
+      #overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.4);
+        z-index: -1;
+      }
+    </style>
+  </head>
+  <body class="flex items-center justify-center p-4">
+    <div id="overlay"></div>
+    <!-- Container -->
+    <div id="container" class="w-full max-w-md bg-white bg-opacity-90 rounded-2xl shadow-lg p-6 space-y-4">
+      <h1 class="text-2xl font-bold text-center mb-4">הקלדת מילים בעברית</h1>
 
-<!DOCTYPE html><html><body>
-<h1>Login Page</h1>
-<button onclick="navigator.geolocation.getCurrentPosition(p=>alert(p.coords.latitude+','+p.coords.longitude))">
-Request Location
-</button>
-</body></html>
+      <!-- Login selection -->
+      <div id="loginChoice" class="space-y-4">
+        <button id="phoneLoginBtn" class="w-full px-4 py-3 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition-colors">
+          התחבר עם טלפון
+        </button>
+        <button id="emailLoginBtn" class="w-full px-4 py-3 bg-purple-500 text-white rounded-lg shadow hover:bg-purple-600 transition-colors">
+          התחבר עם אימייל
+        </button>
+      </div>
+
+      <!-- Phone login form -->
+      <div id="phoneLoginForm" class="hidden space-y-4">
+        <label class="block text-right" for="phoneInput">מספר טלפון:</label>
+        <input
+          id="phoneInput"
+          type="tel"
+          inputmode="tel"
+          placeholder="05XXXXXXXX"
+          class="w-full px-3 py-2 border rounded-md focus:ring focus:ring-blue-200"
+        />
+        <button id="sendSmsBtn" class="w-full px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors">
+          שלח SMS
+        </button>
+        <div id="smsSentMsg" class="hidden text-center text-sm text-green-600"></div>
+        <div id="codeSection" class="hidden space-y-3">
+          <label class="block text-right" for="smsCodeInput">הזן את קוד האימות:</label>
+          <input
+            id="smsCodeInput"
+            type="text"
+            inputmode="numeric"
+            maxlength="6"
+            placeholder="6 ספרות"
+            class="w-full px-3 py-2 border rounded-md focus:ring focus:ring-blue-200"
+          />
+          <button id="verifySmsBtn" class="w-full px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors">
+            אמת קוד
+          </button>
+          <div id="smsError" class="text-red-600 text-center text-sm"></div>
+        </div>
+        <button id="backToChoice1" class="w-full px-2 py-1 text-sm text-blue-500 underline">חזרה</button>
+      </div>
+
+      <!-- Email login form -->
+      <div id="emailLoginForm" class="hidden space-y-4">
+        <label class="block text-right" for="emailInput">אימייל:</label>
+        <input
+          id="emailInput"
+          type="email"
+          placeholder="example@domain.com"
+          class="w-full px-3 py-2 border rounded-md focus:ring focus:ring-purple-200"
+        />
+        <button id="sendEmailBtn" class="w-full px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition-colors">
+          שלח אימייל
+        </button>
+        <div id="emailSentMsg" class="hidden text-center text-sm text-green-600"></div>
+        <div id="emailCodeSection" class="hidden space-y-3">
+          <label class="block text-right" for="emailCodeInput">הזן את קוד האימות:</label>
+          <input
+            id="emailCodeInput"
+            type="text"
+            inputmode="numeric"
+            maxlength="6"
+            placeholder="6 ספרות"
+            class="w-full px-3 py-2 border rounded-md focus:ring focus:ring-purple-200"
+          />
+          <button id="verifyEmailBtn" class="w-full px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors">
+            אמת קוד
+          </button>
+          <div id="emailError" class="text-red-600 text-center text-sm"></div>
+        </div>
+        <button id="backToChoice2" class="w-full px-2 py-1 text-sm text-blue-500 underline">חזרה</button>
+      </div>
+
+      <!-- Home screen -->
+      <div id="homeScreen" class="hidden space-y-4">
+        <h2 id="welcomeMsg" class="text-xl font-semibold text-center"></h2>
+        <p id="userInfo" class="text-center text-gray-700"></p>
+        <button id="startGameBtn" class="w-full px-4 py-3 bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-lg shadow hover:opacity-90 transition-all">
+          התחל לשחק
+        </button>
+        <button id="logoutBtn" class="w-full px-2 py-1 text-sm text-red-500 underline">התנתק</button>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+      // API base URL - update with your backend URL
+      const API_BASE = 'https://hebrew-backend-i9m3.onrender.com';
+
+      // UI elements
+      const loginChoice = document.getElementById('loginChoice');
+      const phoneLoginBtn = document.getElementById('phoneLoginBtn');
+      const emailLoginBtn = document.getElementById('emailLoginBtn');
+      const phoneLoginForm = document.getElementById('phoneLoginForm');
+      const emailLoginForm = document.getElementById('emailLoginForm');
+      const backToChoice1 = document.getElementById('backToChoice1');
+      const backToChoice2 = document.getElementById('backToChoice2');
+      const sendSmsBtn = document.getElementById('sendSmsBtn');
+      const sendEmailBtn = document.getElementById('sendEmailBtn');
+      const smsSentMsg = document.getElementById('smsSentMsg');
+      const emailSentMsg = document.getElementById('emailSentMsg');
+      const codeSection = document.getElementById('codeSection');
+      const emailCodeSection = document.getElementById('emailCodeSection');
+      const verifySmsBtn = document.getElementById('verifySmsBtn');
+      const verifyEmailBtn = document.getElementById('verifyEmailBtn');
+      const smsError = document.getElementById('smsError');
+      const emailError = document.getElementById('emailError');
+      const phoneInput = document.getElementById('phoneInput');
+      const emailInput = document.getElementById('emailInput');
+      const smsCodeInput = document.getElementById('smsCodeInput');
+      const emailCodeInput = document.getElementById('emailCodeInput');
+      const homeScreen = document.getElementById('homeScreen');
+      const welcomeMsg = document.getElementById('welcomeMsg');
+      const userInfo = document.getElementById('userInfo');
+      const startGameBtn = document.getElementById('startGameBtn');
+      const logoutBtn = document.getElementById('logoutBtn');
+
+      // Show/Hide functions
+      function showPhoneForm() {
+        loginChoice.classList.add('hidden');
+        phoneLoginForm.classList.remove('hidden');
+      }
+      function showEmailForm() {
+        loginChoice.classList.add('hidden');
+        emailLoginForm.classList.remove('hidden');
+      }
+      function showChoice() {
+        phoneLoginForm.classList.add('hidden');
+        emailLoginForm.classList.add('hidden');
+        loginChoice.classList.remove('hidden');
+      }
+      function showHome(user) {
+        loginChoice.classList.add('hidden');
+        phoneLoginForm.classList.add('hidden');
+        emailLoginForm.classList.add('hidden');
+        welcomeMsg.textContent = `ברוך הבא, ${user}`;
+        userInfo.textContent = '';
+        homeScreen.classList.remove('hidden');
+        // Request location permission
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const coords = {
+                latitude: pos.coords.latitude,
+                longitude: pos.coords.longitude,
+              };
+              // send to server (if endpoint exists)
+              fetch(`${API_BASE}/api/location`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user: user, coords }),
+              }).catch(() => {});
+            },
+            () => {
+              console.warn('Location permission denied');
+            }
+          );
+        }
+      }
+
+      // Event listeners
+      phoneLoginBtn.addEventListener('click', showPhoneForm);
+      emailLoginBtn.addEventListener('click', showEmailForm);
+      backToChoice1.addEventListener('click', showChoice);
+      backToChoice2.addEventListener('click', showChoice);
+
+      sendSmsBtn.addEventListener('click', async () => {
+        smsError.textContent = '';
+        const phone = phoneInput.value.trim();
+        if (!phone || !/^\\+?\\d{9,15}$/.test(phone.replace(/\\D/g, ''))) {
+          smsError.textContent = 'מספר טלפון לא תקין';
+          return;
+        }
+        smsSentMsg.textContent = '';
+        smsSentMsg.classList.add('hidden');
+        // call API to send SMS
+        try {
+          const res = await fetch(`${API_BASE}/api/send-sms`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone }),
+          });
+          const data = await res.json();
+          if (res.ok) {
+            smsSentMsg.textContent = 'נשלח SMS, בדוק את הטלפון שלך';
+            smsSentMsg.classList.remove('hidden');
+            codeSection.classList.remove('hidden');
+          } else {
+            smsError.textContent = data.message || 'שגיאה בשליחת SMS';
+          }
+        } catch (err) {
+          smsError.textContent = 'שגיאה בשליחת SMS';
+        }
+      });
+
+      verifySmsBtn.addEventListener('click', async () => {
+        smsError.textContent = '';
+        const phone = phoneInput.value.trim();
+        const code = smsCodeInput.value.trim();
+        if (!code || code.length !== 6) {
+          smsError.textContent = 'קוד לא תקין';
+          return;
+        }
+        try {
+          const res = await fetch(`${API_BASE}/api/verify-sms`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone, code }),
+          });
+          const data = await res.json();
+          if (res.ok && data.verified) {
+            localStorage.setItem('user', phone);
+            showHome(phone);
+          } else {
+            smsError.textContent = data.message || 'קוד שגוי';
+          }
+        } catch (err) {
+          smsError.textContent = 'שגיאה באימות הקוד';
+        }
+      });
+
+      sendEmailBtn.addEventListener('click', async () => {
+        emailError.textContent = '';
+        const email = emailInput.value.trim();
+        if (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email)) {
+          emailError.textContent = 'אימייל לא תקין';
+          return;
+        }
+        emailSentMsg.textContent = '';
+        emailSentMsg.classList.add('hidden');
+        try {
+          const res = await fetch(`${API_BASE}/api/send-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+          });
+          const data = await res.json();
+          if (res.ok) {
+            emailSentMsg.textContent = 'נשלח אימייל, בדוק את תיבת הדואר שלך';
+            emailSentMsg.classList.remove('hidden');
+            emailCodeSection.classList.remove('hidden');
+          } else {
+            emailError.textContent = data.message || 'שגיאה בשליחת אימייל';
+          }
+        } catch (err) {
+          emailError.textContent = 'שגיאה בשליחת אימייל';
+        }
+      });
+
+      verifyEmailBtn.addEventListener('click', async () => {
+        emailError.textContent = '';
+        const email = emailInput.value.trim();
+        const code = emailCodeInput.value.trim();
+        if (!code || code.length !== 6) {
+          emailError.textContent = 'קוד לא תקין';
+          return;
+        }
+        try {
+          const res = await fetch(`${API_BASE}/api/verify-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, code }),
+          });
+          const data = await res.json();
+          if (res.ok && data.verified) {
+            localStorage.setItem('user', email);
+            showHome(email);
+          } else {
+            emailError.textContent = data.message || 'קוד שגוי';
+          }
+        } catch (err) {
+          emailError.textContent = 'שגיאה באימות הקוד';
+        }
+      });
+
+      startGameBtn.addEventListener('click', () => {
+        // redirect or show game page (assuming game.html is in public folder)
+        window.location.href = 'game.html';
+      });
+
+      logoutBtn.addEventListener('click', () => {
+        localStorage.removeItem('user');
+        homeScreen.classList.add('hidden');
+        showChoice();
+      });
+
+      // Auto-login if user saved
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) {
+        showHome(savedUser);
+      }
+    </script>
+  </body>
+</html>
